@@ -1,9 +1,0 @@
-{
-  "type": "module",
-  "scripts": {
-    "format": "js-beautify -r *.js"
-  },
-  "devDependencies": {
-    "js-beautify": "^1.15.1"
-  }
-}

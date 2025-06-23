@@ -1,11 +1,10 @@
 mod game;
-mod level;
 mod player;
 
 use axum::Router;
 use game::Game;
 use player::Player;
-use level::{BitVectorMap, Level, Coordinates};
+use map::{BitVectorMap, Level, Coordinates};
 
 use serde_json::json;
 use rmpv::Value;

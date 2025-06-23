@@ -52,9 +52,10 @@ pub struct BitVectorMap {
     height: usize,
 }
 
-impl BitVectorMap { //Why a bitvector? because I can! 
-                    // ( also map information will be sent through to the player connection after
-                    // the first websocket call, so it's good to save some bits of memory )
+impl BitVectorMap { 
+    //  Why a bitvector? because I can! 
+    //  ( also map information will be sent through to the player connection after
+    //  the first websocket call, so it's good to save some bits of memory )
     pub fn new(rows: Vec<u64>, width: usize, height: usize) -> Self {
         BitVectorMap {rows, width, height}
     }

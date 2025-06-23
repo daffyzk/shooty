@@ -1,8 +1,8 @@
 use socketioxide::socket::Sid;
 use tokio::time::Instant;
 
-use crate::Player;
-use crate::Level;
+use crate::player::Player;
+use map::Level;
 
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;

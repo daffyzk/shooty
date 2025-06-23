@@ -1,4 +1,4 @@
-use crate::level::Coordinates;
+use map::Coordinates;
 use socketioxide::socket::Sid;
 
 #[derive(Debug)]
