@@ -7,11 +7,15 @@ import { Player } from "./game/player.tsx"
 
 export type Coordinates = {[key: string]: number}
 
-var canvas: HTMLCanvasElement, 
-	ctx: CanvasRenderingContext2D, 
-	scenario: Level, 
+type OtherPlayer = { id: string, x: number, y: number, angle: number }
+
+var canvas: HTMLCanvasElement,
+	ctx: CanvasRenderingContext2D,
+	scenario: Level,
 	player: Player,
-	crosshair: Coordinates = {x: 0, y: 0}
+	crosshair: Coordinates = {x: 0, y: 0},
+	mySocketId: string = "",
+	otherPlayers: OtherPlayer[] = []
 
 const socket     = io(
 	"ws://localhost:4269/", {
@@ -101,17 +105,14 @@ export function lineSegment(x1: number,y1: number,x2: number,y2: number): number
 function init(){
 
 	console.log("init started")
-	socket.on("tick", (data) => {
-		console.log(data)
+	socket.on("tick", (data: OtherPlayer[]) => {
+		// filter out our own player, keep everyone else
+		otherPlayers = data.filter(p => p.id !== mySocketId)
 	})
 
 	socket.on("connect", () => {
-		console.log("connected");
-	})
-
-	
-	socket.on("received", (data) => {
-		console.log('received' + data)
+		mySocketId = socket.id ?? ""
+		console.log("connected, id:", mySocketId);
 	})
 
 
@@ -169,10 +170,35 @@ function clearCanvas(){
 	canvas.height = canvas.height
 }
 
+function drawOtherPlayers(){
+	for(const p of otherPlayers){
+		// server sends raw grid units, multiply by tileSize to get pixels
+		let rx = p.x * scenario.tileSize
+		let ry = p.y * scenario.tileSize
+
+		// red square for other players
+		ctx.save()
+		ctx.fillStyle = "red"
+		ctx.fillRect(rx - 4, ry - 4, 8, 8)
+
+		// direction line
+		let len = 15
+		let xEnd = rx + Math.cos(p.angle) * len
+		let yEnd = ry + Math.sin(p.angle) * len
+		ctx.beginPath()
+		ctx.moveTo(rx, ry)
+		ctx.lineTo(xEnd, yEnd)
+		ctx.strokeStyle = "red"
+		ctx.stroke()
+		ctx.restore()
+	}
+}
+
 function gameLoop(){
 	clearCanvas()
 
 	scenario.draw()
+	drawOtherPlayers()
 	player.draw()
 }
 

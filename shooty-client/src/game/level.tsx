@@ -20,8 +20,8 @@ const map: number[][] = [
 	[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ],
 	tileSize: number = 20,
-	spawnX: number = 35,
-	spawnY: number = 35
+	spawnX: number = 40,
+	spawnY: number = 40
 
 type HEX = `#${string}`
 

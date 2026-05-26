@@ -102,22 +102,23 @@ export class Player {
 		bullet.draw()
 	}
 
-	collision(x: number,y: number){
-		
-		var crash = false
-
-		// get coordinates of player's current square
-		var tilePosX = Math.round(x) / this.scenario.tileWidth
-		var tilePosY = Math.round(y) / this.scenario.tileHeight        
-
-        // console.log("player:collisionTilePosX: " + tilePosX)
-        // console.log("player:collisionTilePosY: " + tilePosY)
-		
-		if(this.scenario.collision(tilePosX, tilePosY)){
-            crash = true    
-        }
-
-		return crash
+	collision(x: number, y: number){
+		// check all 4 corners of player bounding box (6x6, so ±3 from center)
+		const half = 3
+		const corners = [
+			{x: x - half, y: y - half},  // top-left
+			{x: x + half, y: y - half},  // top-right
+			{x: x - half, y: y + half},  // bottom-left
+			{x: x + half, y: y + half},  // bottom-right
+		]
+		for (const c of corners) {
+			let tileX = Math.floor(c.x / this.scenario.tileWidth)
+			let tileY = Math.floor(c.y / this.scenario.tileHeight)
+			if (this.scenario.collision(tileX, tileY)) {
+				return true
+			}
+		}
+		return false
 	}
 	
 	update(){
@@ -141,12 +142,11 @@ export class Player {
 		var newX = this.x + coords.x
 		var newY = this.y + coords.y
 
-		// console.log("newX: " + newX)
-		// console.log("newY: " + newY)
-		// console.log(this.move)
-
-		if(!this.collision(newX, newY)){
+		// check X and Y separately so player can slide along walls
+		if(!this.collision(newX, this.y)){
 			this.x = newX
+		}
+		if(!this.collision(this.x, newY)){
 			this.y = newY
 		}
 		
