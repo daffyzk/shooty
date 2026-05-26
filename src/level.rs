@@ -20,23 +20,11 @@ impl Level {
         Level { map, tile_size, spawns }
     }
 
-    pub fn collision(self, x: usize, y: usize) -> bool {
-
-        let mut crash: bool = false;
-
+    pub fn collision(&self, x: usize, y: usize) -> bool {
         if y >= self.map.height || x >= self.map.width {
-            //bad error wooo
-        } else {
-            if self.get_tile(x, y).unwrap() == 1 {
-                crash = true
-            }
+            return true; // out of bounds = wall
         }
-        crash
-    }
-
-    /// Is the tile a wall???? If it is returns 1, otherwise 0
-    fn get_tile(self, x: usize,y: usize) -> Option<u8>{
-        self.map.get(x, y)
+        self.map.get(y, x).unwrap_or(1) == 1  // row=y, col=x
     }
 
     pub fn get_spawn(&self) -> Coordinates {
@@ -61,7 +49,7 @@ impl BitVectorMap { //Why a bitvector? because I can!
 
     pub fn get(&self, row: usize, col: usize) -> Option<u8> {
         if row < self.height && col < self.width {
-            Some(((self.rows[row] >> col) & 1) as u8)
+            Some(((self.rows[row] >> (self.width - 1 - col)) & 1) as u8)
         }
         else {
             None

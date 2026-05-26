@@ -1,7 +1,7 @@
 import './App.css'
 
 import { io, Socket } from "socket.io-client"
-import { Level } from "./game/level.tsx"
+import { Level, parseServerMap } from "./game/level.tsx"
 import { Player } from "./game/player.tsx"
 
 
@@ -34,54 +34,26 @@ const socket     = io(
 // Match keyboard events
 
 document.addEventListener('keydown', (event) => {
-
-  	switch(event.key){
-		
-		case "w":
-			socket.emit("action", "moveup")
-			console.log("moveup")
-			player.moveUp()
-		break
-
-		case "a":
-			socket.emit("action", "moveleft")
-			console.log("moveleft")
-			player.moveLeft()
-		break
-				
-		case "s":
-			socket.emit("action", "movedown")
-			console.log("movedown")
-			player.moveDown()
-		break
-		
-		case "d":
-			socket.emit("action", "moveright")
-			console.log("moveright")
-			player.moveRight()
-		break
+	if(["w","a","s","d"].includes(event.key) && !event.repeat){
+		socket.emit("keyinput", { key: event.key, pressed: true })
+		if(player){
+			if(event.key === "w") player.moveUp()
+			if(event.key === "a") player.moveLeft()
+			if(event.key === "s") player.moveDown()
+			if(event.key === "d") player.moveRight()
+		}
 	}
 })
 
 document.addEventListener('keyup', (event) => {
-
-	switch(event.key){
-
-		case "w":
-			player.stopMovingUp()
-		break
-
-		case "s":
-			player.stopMovingDown()
-		break
-
-		case "a":
-			player.stopMovingLeft()
-		break
-
-		case "d":
-			player.stopMovingRight()
-		break
+	if(["w","a","s","d"].includes(event.key)){
+		socket.emit("keyinput", { key: event.key, pressed: false })
+		if(player){
+			if(event.key === "w") player.stopMovingUp()
+			if(event.key === "s") player.stopMovingDown()
+			if(event.key === "a") player.stopMovingLeft()
+			if(event.key === "d") player.stopMovingRight()
+		}
 	}
 })
 
@@ -106,8 +78,16 @@ function init(){
 
 	console.log("init started")
 	socket.on("tick", (data: OtherPlayer[]) => {
-		// filter out our own player, keep everyone else
 		otherPlayers = data.filter(p => p.id !== mySocketId)
+		// lerp local player toward server position (server is authoritative)
+		const me = data.find(p => p.id === mySocketId)
+		if(me && player){
+			const serverX = me.x * scenario.tileSize
+			const serverY = me.y * scenario.tileSize
+			const t = 0.3 // interpolation factor — higher = snappier, lower = smoother
+			player.x += (serverX - player.x) * t
+			player.y += (serverY - player.y) * t
+		}
 	})
 
 	socket.on("connect", () => {
@@ -116,8 +96,30 @@ function init(){
 	})
 
 
-	socket.on("gameinfo", (data) => {
-		console.log(data)
+	socket.on("gameinfo", (data: { map: number[], width: number, height: number }) => {
+		console.log("gameinfo received:", data)
+
+		const mapData = parseServerMap(data.map, data.width)
+		const tileSize = 20
+		// spawn at tile (2,2), convert to pixels
+		const spawnX = 2 * tileSize
+		const spawnY = 2 * tileSize
+
+		scenario = new Level(canvas, ctx, mapData, tileSize, spawnX, spawnY)
+		player   = new Player(ctx, scenario)
+
+		document.addEventListener('mousemove', (event) => {
+			const rect = canvas.getBoundingClientRect();
+			crosshair.x = event.clientX - rect.left;
+			crosshair.y = event.clientY - rect.top;
+			player.aim(crosshair)
+		});
+
+		document.addEventListener('click', () => {
+			player.shoot()
+		});
+
+		setInterval(function(){gameLoop()},1000/FPS)  // start the game loop
 	})
 
 	socket.on("disconnect", (reason: Socket.DisconnectReason, details) => {
@@ -129,8 +131,8 @@ function init(){
       console.log(details);
     }
 	})
-  
-	//console.log("game started")
+
+	// setup canvas
   let getCanvas = document.getElementById('game')
   if(getCanvas !== null && getCanvas instanceof HTMLCanvasElement) {
     canvas = getCanvas
@@ -140,29 +142,8 @@ function init(){
     }
   }
 
-	// set canvas size (based on values hardcoded in css)
 	canvas.width  = canvas.clientWidth
 	canvas.height = canvas.clientHeight
-
-	scenario      = new Level(canvas, ctx)
-	player        = new Player(ctx, scenario)
-
-	document.addEventListener('mousemove', (event) => {
-
-		const rect = canvas.getBoundingClientRect();
-		crosshair.x = event.clientX - rect.left;
-		crosshair.y = event.clientY - rect.top;
-	
-		player.aim(crosshair)
-		
-	});
-
-	document.addEventListener('click', () => {
-		player.shoot()
-		
-	});
-
-	setInterval(function(){gameLoop()},1000/FPS)  // start the game loop
 }
 
 function clearCanvas(){
@@ -200,6 +181,15 @@ function gameLoop(){
 	scenario.draw()
 	drawOtherPlayers()
 	player.draw()
+
+	// send position to server in raw grid units (pixels / tileSize)
+	if(player && scenario){
+		socket.volatile.emit("position", {
+			x: player.x / scenario.tileSize,
+			y: player.y / scenario.tileSize,
+			angle: player.rotationAngle
+		})
+	}
 }
 
 

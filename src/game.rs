@@ -29,9 +29,15 @@ impl Game {
         tracing::info!("Player left: {:?}", id);
     }
 
-    pub fn apply_action(&mut self, id: Sid, action: &str) {
+    pub fn set_key(&mut self, id: Sid, key: &str, pressed: bool) {
         if let Some(player) = self.players.get_mut(&id) {
-            player.apply_action(action);
+            player.set_key(key, pressed);
+        }
+    }
+
+    pub fn update(&mut self) {
+        for player in self.players.values_mut() {
+            player.update(&self.scenario);
         }
     }
 

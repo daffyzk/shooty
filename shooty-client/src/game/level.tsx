@@ -1,29 +1,17 @@
-import { Coordinates } from "../App.tsx" 
-
-const map: number[][] = [
-	[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-	[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
-	[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
-	[1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-	[1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
-	[1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-	[1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
-	[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-	[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-],
-	tileSize: number = 20,
-	spawnX: number = 40,
-	spawnY: number = 40
+import { Coordinates } from "../App.tsx"
 
 type HEX = `#${string}`
+
+// convert server map format (array of bit-packed integers) to 2D tile array
+export function parseServerMap(rawMap: number[], width: number): number[][] {
+	return rawMap.map(row => {
+		const tiles: number[] = []
+		for(let col = 0; col < width; col++){
+			tiles.push((row >> (width - 1 - col)) & 1)
+		}
+		return tiles
+	})
+}
 
 export class Level {
 
@@ -33,37 +21,37 @@ export class Level {
     matrix: number[][]
 
     spawn: Coordinates
-    
+
     // map dimensions
     mapHeight: number
     mapWidth: number
-    
+
     // canvas dimensions
     canvasHeight: number
     canvasWidth: number
-    
+
     // tile size
     tileWidth: number
     tileHeight: number
 
-	constructor(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D){
+	constructor(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, mapData: number[][], tileSize: number, spawnX: number, spawnY: number){
 
 		this.tileSize = tileSize
 		this.canvas = canvas
 		this.ctx = context
-		this.matrix = map
+		this.matrix = mapData
 
 		this.spawn = {x: spawnX, y: spawnY}
 
 		this.mapHeight  = this.matrix.length
 		this.mapWidth = this.matrix[0].length
-		
+
 		this.canvasHeight = this.canvas.height
 		this.canvasWidth = this.canvas.width
-		
+
 		this.tileWidth = this.tileSize
 		this.tileHeight = this.tileSize
-		
+
 	}
 	
 	collision(x: number, y: number) {

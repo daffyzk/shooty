@@ -4,7 +4,7 @@ mod player;
 
 use axum::Router;
 use game::Game;
-use player::Player;
+use player::{Player, KeyInput};
 use level::{BitVectorMap, Level, Coordinates};
 
 use serde_json::json;
@@ -33,20 +33,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // game logic stuff
     let map: Vec<u64> = vec![
-        11111111111111,
-        10000000000111,
-        10000000000111,
-        10011000000001,
-        10010001000001,
-        10110001000001,
-        10111001111001,
-        10001000010001,
-        10101000010101,
-        10001000000001,
-        10101110100111,
-        10001000000001,
-        10000000000001,
-        11111111111111 ];
+        0b11111111111111,
+        0b10000000000111,
+        0b10000000000111,
+        0b10011000000001,
+        0b10010001000001,
+        0b10110001000001,
+        0b10111001111001,
+        0b10001000010001,
+        0b10101000010101,
+        0b10001000000001,
+        0b10101110100111,
+        0b10001000000001,
+        0b10000000000001,
+        0b11111111111111 ];
     let map_clone: Vec<u64> = Vec::clone(&map);
 
     let (map_height, map_width): (usize, usize) = (14, 14);
@@ -68,7 +68,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             tick.tick().await;
             let state = {
-                let game = game_loop.lock().unwrap();
+                let mut game = game_loop.lock().unwrap();
+                game.update();
                 game.get_state()
             };
             if !state.is_empty() {
@@ -79,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // socket handlers
     let game_connect = Arc::clone(&game);
-    let game_action = Arc::clone(&game);
+    let game_keyinput = Arc::clone(&game);
     let game_disconnect = Arc::clone(&game);
 
     io.ns("/", move |s: SocketRef| {
@@ -90,14 +91,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut game = game_connect.lock().unwrap();
             game.join(s.id);
         }
-        let data = json!({"map": &map_clone});
+        let data = json!({"map": &map_clone, "width": map_width, "height": map_height});
         s.emit("gameinfo", &data).unwrap();
 
-        // on action — update player in game state
-        let game_action = Arc::clone(&game_action);
-        s.on("action", move |s: SocketRef, Data::<String>(action)| {
-            let mut game = game_action.lock().unwrap();
-            game.apply_action(s.id, &action);
+        // on keyinput — set player movement flags
+        let game_keyinput = Arc::clone(&game_keyinput);
+        s.on("keyinput", move |s: SocketRef, Data::<KeyInput>(input)| {
+            let mut game = game_keyinput.lock().unwrap();
+            game.set_key(s.id, &input.key, input.pressed);
         });
 
         // on disconnect — remove player
